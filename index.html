@@ -27,6 +27,16 @@
       <button id="study-deck-button" type="button" disabled>Study</button>
       <button id="add-card-button" type="button" disabled>Add card</button>
     </div>
+    <div class="card-search">
+      <label for="card-search-input">Search cards</label>
+      <input
+        id="card-search-input"
+        type="search"
+        placeholder="Search questions and answers"
+        autocomplete="off"
+      >
+      <p id="card-match-count" role="status" aria-live="polite"></p>
+    </div>
     <section aria-label="Flashcards" id="cards-area">
       <article class="empty-state">
         <h3>No cards yet</h3>
@@ -110,6 +120,7 @@
     </section>
   </div>
 
+  <script src="storage.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

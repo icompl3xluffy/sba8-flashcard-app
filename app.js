@@ -1,11 +1,14 @@
-const decks = [{ id: 1, name: "My Deck", cards: [] }];
-let selectedDeckId = decks[0].id;
-let nextDeckId = 2;
-let nextCardId = 1;
+const initialState = loadState();
+const decks = initialState.decks;
+let selectedDeckId = initialState.selectedDeckId;
+let nextDeckId = initialState.nextDeckId;
+let nextCardId = initialState.nextCardId;
 let editingDeckId = null;
 let editingCardId = null;
 let modalOpener = null;
 let studyMode = null;
+let searchTimer = null;
+let searchQuery = "";
 
 const deckList = document.querySelector("#deck-list");
 const addDeckButton = document.querySelector("#add-deck-button");
@@ -29,6 +32,12 @@ const cardQuestionInput = document.querySelector("#card-question");
 const cardAnswerInput = document.querySelector("#card-answer");
 const cardFormError = document.querySelector("#card-form-error");
 const saveCardButton = document.querySelector("#save-card-button");
+const cardSearchInput = document.querySelector("#card-search-input");
+const cardMatchCount = document.querySelector("#card-match-count");
+
+function persistState() {
+  return saveState({ decks, selectedDeckId, nextDeckId, nextCardId });
+}
 
 function renderDecks() {
   deckList.replaceChildren();
@@ -40,13 +49,16 @@ function renderDecks() {
     const selectButton = document.createElement("button");
     selectButton.className = "deck-select";
     selectButton.type = "button";
+    selectButton.id = `select-deck-${deck.id}`;
     selectButton.textContent = deck.name;
     selectButton.setAttribute("aria-current", String(deck.id === selectedDeckId));
     selectButton.addEventListener("click", () => {
       if (studyMode) exitStudyMode(false);
       selectedDeckId = deck.id;
+      persistState();
       renderDecks();
       updateCurrentDeck();
+      document.getElementById(`select-deck-${deck.id}`)?.focus();
     });
 
     const actions = document.createElement("div");
@@ -81,25 +93,98 @@ function updateCurrentDeck() {
   renderCards(selectedDeck);
 }
 
+function createEmptyState(iconName, titleText, messageText, actionLabel, actionHandler) {
+  const icons = {
+    deck: "M3 7.5 12 3l9 4.5-9 4.5L3 7.5Zm0 0V17l9 4 9-4V7.5M12 12v9",
+    card: "M4 4.5h16A1.5 1.5 0 0 1 21.5 6v12a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18V6A1.5 1.5 0 0 1 4 4.5ZM7 9h10M7 13h7",
+    search: "m20 20-4.5-4.5M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z",
+  };
+  const article = document.createElement("article");
+  article.className = "empty-state";
+  article.setAttribute("aria-live", "polite");
+  article.setAttribute("aria-atomic", "true");
+
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.classList.add("empty-state-icon");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", icons[iconName]);
+  icon.append(path);
+
+  const heading = document.createElement("h3");
+  heading.textContent = titleText;
+  const message = document.createElement("p");
+  message.textContent = messageText;
+  article.append(icon, heading, message);
+
+  if (actionLabel && actionHandler) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.textContent = actionLabel;
+    action.addEventListener("click", actionHandler);
+    article.append(action);
+  }
+  return article;
+}
+
 function renderCards(deck) {
   cardsArea.replaceChildren();
   studyDeckButton.disabled = !deck || deck.cards.length === 0;
 
-  if (!deck || deck.cards.length === 0) {
-    const emptyState = document.createElement("article");
-    emptyState.className = "empty-state";
-    const title = document.createElement("h3");
-    title.textContent = deck ? "No cards yet" : "No deck selected";
-    const message = document.createElement("p");
-    message.textContent = deck
-      ? "Add a card to start studying this deck."
-      : "Create a deck to start adding flashcards.";
-    emptyState.append(title, message);
-    cardsArea.append(emptyState);
+  const allCards = deck?.cards ?? [];
+  const normalizedQuery = searchQuery.toLocaleLowerCase();
+  const matchingCards = allCards.filter((card) =>
+    !normalizedQuery
+    || card.question.toLocaleLowerCase().includes(normalizedQuery)
+    || card.answer.toLocaleLowerCase().includes(normalizedQuery)
+  );
+  cardMatchCount.textContent = normalizedQuery
+    ? `${matchingCards.length} ${matchingCards.length === 1 ? "match" : "matches"}`
+    : `${allCards.length} ${allCards.length === 1 ? "card" : "cards"}`;
+
+  if (!deck || allCards.length === 0) {
+    if (deck) {
+      cardsArea.append(createEmptyState(
+        "card",
+        "No cards yet",
+        "Add a question and answer to build this deck, then study your cards.",
+        "Add your first card",
+        () => openCardModal(null, addCardButton)
+      ));
+    } else {
+      const hasDecks = decks.length > 0;
+      cardsArea.append(createEmptyState(
+        "deck",
+        hasDecks ? "No deck selected" : "No decks yet",
+        hasDecks
+          ? "Choose a deck from the sidebar to view its cards."
+          : "Create a deck to organize your flashcards and get started.",
+        hasDecks ? null : "Create a deck",
+        hasDecks ? null : () => openDeckModal("create", null, addDeckButton)
+      ));
+    }
     return;
   }
 
-  for (const card of deck.cards) {
+  if (matchingCards.length === 0) {
+    cardsArea.append(createEmptyState(
+      "search",
+      "No matches",
+      "No questions or answers match this search. Try another phrase or clear the search.",
+      "Clear search",
+      () => {
+        cardSearchInput.value = "";
+        searchQuery = "";
+        renderCards(deck);
+        cardSearchInput.focus();
+      }
+    ));
+    return;
+  }
+
+  for (const card of matchingCards) {
     const article = document.createElement("article");
     article.className = "card";
     article.dataset.cardId = String(card.id);
@@ -178,12 +263,13 @@ function enterStudyMode(deckId) {
 
   const view = document.createElement("section");
   view.className = "study-view";
-  view.setAttribute("aria-label", `Study ${deck.name}`);
+  view.setAttribute("aria-labelledby", "study-title");
   view.tabIndex = -1;
 
   const heading = document.createElement("div");
   heading.className = "study-heading";
   const title = document.createElement("h3");
+  title.id = "study-title";
   title.textContent = `Studying ${deck.name}`;
   const progress = document.createElement("p");
   progress.className = "study-progress";
@@ -294,6 +380,11 @@ function exitStudyMode(restoreFocus = true) {
 function handleStudyKeydown(event) {
   if (!studyMode || modal.hidden === false || cardModal.hidden === false) return;
   if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    exitStudyMode();
+    return;
+  }
   if (event.target instanceof HTMLElement &&
     (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName))) {
     return;
@@ -309,13 +400,11 @@ function handleStudyKeydown(event) {
     studyMode.index = Math.min(studyMode.deck.cards.length - 1, studyMode.index + 1);
     studyMode.isFlipped = false;
     renderStudyCard();
-  } else if (event.code === "Space" || event.key === " ") {
+  } else if ((event.code === "Space" || event.key === " ")
+    && !(event.target instanceof Element && event.target.closest("button, a"))) {
     event.preventDefault();
     studyMode.isFlipped = !studyMode.isFlipped;
     renderStudyCard();
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    exitStudyMode();
   }
 }
 
@@ -357,6 +446,7 @@ function deleteDeck(deck) {
   if (selectedDeckId === deck.id) {
     selectedDeckId = decks[0]?.id ?? null;
   }
+  persistState();
   renderDecks();
   updateCurrentDeck();
   statusMessage.textContent = `${deck.name} deck deleted.`;
@@ -390,6 +480,7 @@ deckForm.addEventListener("submit", (event) => {
     statusMessage.textContent = `${name} deck created.`;
   }
 
+  persistState();
   renderDecks();
   updateCurrentDeck();
   closeDeckModal();
@@ -408,8 +499,8 @@ function trapModalFocus(event, dialogElement, closeModal) {
   if (event.key !== "Tab") return;
 
   const focusableElements = [...dialogElement.querySelectorAll(
-    'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-  )].filter((element) => !element.hidden);
+    'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => !element.hidden && !element.inert && element.getClientRects().length > 0);
   const firstElement = focusableElements[0];
   const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -445,8 +536,8 @@ function closeCardModal() {
   const focusTarget = modalOpener?.isConnected
     ? modalOpener
     : modalOpener?.id
-      ? document.getElementById(modalOpener.id) ?? addCardButton
-      : addCardButton;
+      ? document.getElementById(modalOpener.id) ?? (searchQuery ? cardSearchInput : addCardButton)
+      : (searchQuery ? cardSearchInput : addCardButton);
   modalOpener = null;
   editingCardId = null;
   focusTarget.focus();
@@ -464,6 +555,7 @@ function handleCardAction(event) {
 
   if (button.dataset.action === "flip") {
     card.isFlipped = !card.isFlipped;
+    persistState();
     cardElement.classList.toggle("is-flipped", card.isFlipped);
     const questionFace = cardElement.querySelector(".card-front");
     const answerFace = cardElement.querySelector(".card-back");
@@ -487,12 +579,11 @@ function handleCardAction(event) {
     const cardIndex = deck.cards.findIndex((item) => item.id === card.id);
     if (cardIndex === -1) return;
     deck.cards.splice(cardIndex, 1);
+    persistState();
     renderCards(deck);
     statusMessage.textContent = "Flashcard deleted.";
-    const nextCard = deck.cards[Math.min(cardIndex, deck.cards.length - 1)];
-    const focusTarget = nextCard
-      ? document.querySelector(`#edit-card-${nextCard.id}`)
-      : addCardButton;
+    const focusTarget = cardsArea.querySelector(".card [data-action='edit']")
+      ?? (searchQuery ? cardSearchInput : addCardButton);
     focusTarget.focus();
   }
 }
@@ -556,6 +647,7 @@ cardForm.addEventListener("submit", (event) => {
     statusMessage.textContent = "Flashcard created.";
   }
 
+  persistState();
   renderCards(deck);
   closeCardModal();
 });
@@ -566,6 +658,15 @@ document.addEventListener("focusin", (event) => {
     const focusInput = activeModal === modal ? deckNameInput : cardQuestionInput;
     focusInput.focus();
   }
+});
+
+cardSearchInput.addEventListener("input", () => {
+  window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(() => {
+    searchQuery = cardSearchInput.value.trim();
+    const selectedDeck = decks.find((deck) => deck.id === selectedDeckId);
+    renderCards(selectedDeck);
+  }, 300);
 });
 
 renderDecks();
