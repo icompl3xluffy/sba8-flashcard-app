@@ -5,6 +5,7 @@ let nextCardId = 1;
 let editingDeckId = null;
 let editingCardId = null;
 let modalOpener = null;
+let studyMode = null;
 
 const deckList = document.querySelector("#deck-list");
 const addDeckButton = document.querySelector("#add-deck-button");
@@ -19,6 +20,7 @@ const formError = document.querySelector("#deck-form-error");
 const saveDeckButton = document.querySelector("#save-deck-button");
 const cardsArea = document.querySelector("#cards-area");
 const addCardButton = document.querySelector("#add-card-button");
+const studyDeckButton = document.querySelector("#study-deck-button");
 const cardModal = document.querySelector("#card-modal");
 const cardModalDialog = cardModal.querySelector('[role="dialog"]');
 const cardModalTitle = document.querySelector("#card-modal-title");
@@ -41,6 +43,7 @@ function renderDecks() {
     selectButton.textContent = deck.name;
     selectButton.setAttribute("aria-current", String(deck.id === selectedDeckId));
     selectButton.addEventListener("click", () => {
+      if (studyMode) exitStudyMode(false);
       selectedDeckId = deck.id;
       renderDecks();
       updateCurrentDeck();
@@ -74,11 +77,13 @@ function updateCurrentDeck() {
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId);
   currentDeckTitle.textContent = selectedDeck ? `${selectedDeck.name} — Cards` : "Cards";
   addCardButton.disabled = !selectedDeck;
+  studyDeckButton.disabled = !selectedDeck || selectedDeck.cards.length === 0;
   renderCards(selectedDeck);
 }
 
 function renderCards(deck) {
   cardsArea.replaceChildren();
+  studyDeckButton.disabled = !deck || deck.cards.length === 0;
 
   if (!deck || deck.cards.length === 0) {
     const emptyState = document.createElement("article");
@@ -156,7 +161,166 @@ function renderCards(deck) {
   }
 }
 
+function enterStudyMode(deckId) {
+  const deck = decks.find((item) => item.id === deckId);
+  if (!deck) {
+    statusMessage.textContent = "That deck could not be found.";
+    return false;
+  }
+  if (deck.cards.length === 0) {
+    statusMessage.textContent = `${deck.name} has no cards to study.`;
+    return false;
+  }
+
+  if (studyMode) exitStudyMode(false);
+  selectedDeckId = deck.id;
+  renderDecks();
+
+  const view = document.createElement("section");
+  view.className = "study-view";
+  view.setAttribute("aria-label", `Study ${deck.name}`);
+  view.tabIndex = -1;
+
+  const heading = document.createElement("div");
+  heading.className = "study-heading";
+  const title = document.createElement("h3");
+  title.textContent = `Studying ${deck.name}`;
+  const progress = document.createElement("p");
+  progress.className = "study-progress";
+  progress.setAttribute("aria-live", "polite");
+
+  const exitButton = document.createElement("button");
+  exitButton.type = "button";
+  exitButton.dataset.studyAction = "exit";
+  exitButton.className = "secondary-button";
+  exitButton.textContent = "Exit study";
+  heading.append(title, progress, exitButton);
+
+  const card = document.createElement("article");
+  card.className = "card study-card";
+  const inner = document.createElement("div");
+  inner.className = "card-inner";
+
+  const questionFace = document.createElement("div");
+  questionFace.className = "card-face card-front";
+  const questionTitle = document.createElement("h4");
+  questionTitle.textContent = "Question";
+  const questionText = document.createElement("p");
+  questionFace.append(questionTitle, questionText);
+
+  const answerFace = document.createElement("div");
+  answerFace.className = "card-face card-back";
+  const answerTitle = document.createElement("h4");
+  answerTitle.textContent = "Answer";
+  const answerText = document.createElement("p");
+  answerFace.append(answerTitle, answerText);
+  inner.append(questionFace, answerFace);
+  card.append(inner);
+
+  const controls = document.createElement("div");
+  controls.className = "study-controls";
+  const previousButton = document.createElement("button");
+  previousButton.type = "button";
+  previousButton.dataset.studyAction = "previous";
+  previousButton.textContent = "Previous";
+
+  const flipButton = document.createElement("button");
+  flipButton.type = "button";
+  flipButton.dataset.studyAction = "flip";
+  flipButton.setAttribute("aria-pressed", "false");
+  flipButton.textContent = "Show answer";
+
+  const nextButton = document.createElement("button");
+  nextButton.type = "button";
+  nextButton.dataset.studyAction = "next";
+  nextButton.textContent = "Next";
+  controls.append(previousButton, flipButton, nextButton);
+
+  const shortcutHint = document.createElement("p");
+  shortcutHint.className = "study-shortcuts";
+  shortcutHint.textContent = "Keyboard: Left/Right to navigate, Space to flip, Esc to exit.";
+  view.append(heading, card, controls, shortcutHint);
+  cardsArea.replaceChildren(view);
+
+  studyMode = {
+    deck,
+    index: 0,
+    isFlipped: false,
+    opener: studyDeckButton,
+    progress,
+    card,
+    questionText,
+    answerText,
+    previousButton,
+    flipButton,
+    nextButton,
+  };
+  renderStudyCard();
+  document.addEventListener("keydown", handleStudyKeydown);
+  exitButton.focus();
+  return true;
+}
+
+function renderStudyCard() {
+  if (!studyMode) return;
+  const { deck, index, isFlipped } = studyMode;
+  const card = deck.cards[index];
+  studyMode.progress.textContent = `Card ${index + 1} of ${deck.cards.length}`;
+  studyMode.questionText.textContent = card.question;
+  studyMode.answerText.textContent = card.answer;
+  studyMode.card.classList.toggle("is-flipped", isFlipped);
+
+  const questionFace = studyMode.card.querySelector(".card-front");
+  const answerFace = studyMode.card.querySelector(".card-back");
+  questionFace.setAttribute("aria-hidden", String(isFlipped));
+  questionFace.inert = isFlipped;
+  answerFace.setAttribute("aria-hidden", String(!isFlipped));
+  answerFace.inert = !isFlipped;
+  studyMode.flipButton.setAttribute("aria-pressed", String(isFlipped));
+  studyMode.flipButton.textContent = isFlipped ? "Show question" : "Show answer";
+  studyMode.previousButton.disabled = index === 0;
+  studyMode.nextButton.disabled = index === deck.cards.length - 1;
+}
+
+function exitStudyMode(restoreFocus = true) {
+  if (!studyMode) return;
+  const opener = studyMode.opener;
+  document.removeEventListener("keydown", handleStudyKeydown);
+  studyMode = null;
+  updateCurrentDeck();
+  if (restoreFocus) opener.focus();
+}
+
+function handleStudyKeydown(event) {
+  if (!studyMode || modal.hidden === false || cardModal.hidden === false) return;
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.target instanceof HTMLElement &&
+    (event.target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName))) {
+    return;
+  }
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    studyMode.index = Math.max(0, studyMode.index - 1);
+    studyMode.isFlipped = false;
+    renderStudyCard();
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    studyMode.index = Math.min(studyMode.deck.cards.length - 1, studyMode.index + 1);
+    studyMode.isFlipped = false;
+    renderStudyCard();
+  } else if (event.code === "Space" || event.key === " ") {
+    event.preventDefault();
+    studyMode.isFlipped = !studyMode.isFlipped;
+    renderStudyCard();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    exitStudyMode();
+  }
+}
+
 function openDeckModal(mode, deck, opener) {
+  if (studyMode) exitStudyMode(false);
   editingDeckId = mode === "edit" ? deck.id : null;
   modalOpener = opener;
   modalTitle.textContent = editingDeckId ? "Rename deck" : "Add deck";
@@ -186,6 +350,7 @@ function deleteDeck(deck) {
   const confirmed = window.confirm(`Delete the "${deck.name}" deck?`);
   if (!confirmed) return;
 
+  if (studyMode?.deck.id === deck.id) exitStudyMode(false);
   const deckIndex = decks.findIndex((item) => item.id === deck.id);
   if (deckIndex === -1) return;
   decks.splice(deckIndex, 1);
@@ -333,11 +498,32 @@ function handleCardAction(event) {
 }
 
 addCardButton.addEventListener("click", () => openCardModal(null, addCardButton));
+studyDeckButton.addEventListener("click", () => enterStudyMode(selectedDeckId));
 document.querySelector("#cancel-card-button").addEventListener("click", closeCardModal);
 cardModal.addEventListener("keydown", (event) =>
   trapModalFocus(event, cardModalDialog, closeCardModal)
 );
 cardsArea.addEventListener("click", handleCardAction);
+cardsArea.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const button = event.target.closest("button[data-study-action]");
+  if (!button || !cardsArea.contains(button) || !studyMode) return;
+
+  if (button.dataset.studyAction === "exit") {
+    exitStudyMode();
+  } else if (button.dataset.studyAction === "flip") {
+    studyMode.isFlipped = !studyMode.isFlipped;
+    renderStudyCard();
+  } else if (button.dataset.studyAction === "previous") {
+    studyMode.index = Math.max(0, studyMode.index - 1);
+    studyMode.isFlipped = false;
+    renderStudyCard();
+  } else if (button.dataset.studyAction === "next") {
+    studyMode.index = Math.min(studyMode.deck.cards.length - 1, studyMode.index + 1);
+    studyMode.isFlipped = false;
+    renderStudyCard();
+  }
+});
 
 cardForm.addEventListener("submit", (event) => {
   event.preventDefault();

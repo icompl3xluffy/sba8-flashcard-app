@@ -1,19 +1,24 @@
 :root {
   color-scheme: light;
-  --color-page: #f5f7fb;
+  --color-page: #fff9ed;
   --color-surface: #ffffff;
-  --color-text: #1f2937;
-  --color-muted: #64748b;
-  --color-border: #dbe2ea;
-  --color-accent: #4f46e5;
+  --color-text: #20243a;
+  --color-muted: #62677d;
+  --color-border: #e8dfcf;
+  --color-accent: #5b3fc8;
   --color-on-accent: #ffffff;
-  --color-accent-soft: #eef2ff;
+  --color-accent-soft: #f0ebff;
+  --color-warm-accent: #c2410c;
+  --color-card-front: #fff4cf;
+  --color-card-back: #dcf7ed;
+  --color-danger: #b42335;
+  --color-danger-soft: #fee8e7;
   --space-1: 0.5rem;
   --space-2: 1rem;
   --space-3: 1.5rem;
   --space-4: 2rem;
   --radius: 0.75rem;
-  --shadow: 0 1px 3px rgb(15 23 42 / 8%);
+  --shadow: 0 4px 14px rgb(71 50 112 / 9%);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--color-text);
   background: var(--color-page);
@@ -48,8 +53,10 @@ header {
   grid-area: header;
   padding: var(--space-2) var(--space-3);
   color: var(--color-on-accent);
-  background: var(--color-accent);
+  background: linear-gradient(110deg, #5036be, #8245c7);
+  border-bottom: 4px solid #f2a746;
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 header h1,
@@ -101,10 +108,13 @@ button {
   border: 1px solid transparent;
   border-radius: 0.5rem;
   cursor: pointer;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 button:hover {
-  filter: brightness(0.94);
+  filter: brightness(0.95);
+  box-shadow: 0 3px 9px rgb(41 29 80 / 18%);
+  transform: translateY(-1px);
 }
 
 button:disabled {
@@ -166,8 +176,8 @@ nav ul {
 }
 
 .delete-button:hover {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
 }
 
 :is(a, button, input, textarea):focus-visible {
@@ -258,11 +268,11 @@ article p {
 }
 
 .card-front {
-  background: var(--color-page);
+  background: var(--color-card-front);
 }
 
 .card-back {
-  background: var(--color-accent-soft);
+  background: var(--color-card-back);
   transform: rotateY(180deg);
 }
 
@@ -276,6 +286,89 @@ article p {
 
 .flip-button {
   margin-right: auto;
+  background: var(--color-warm-accent);
+}
+
+.flip-button:hover,
+.study-controls button[data-study-action="flip"] {
+  background: var(--color-warm-accent);
+}
+
+.study-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(100%, 42rem);
+  margin: 0 auto;
+}
+
+.study-heading {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  width: 100%;
+}
+
+.study-heading h3 {
+  margin: 0;
+}
+
+.study-progress {
+  grid-column: 1;
+  margin: 0;
+  color: var(--color-muted);
+  padding: 0.25rem 0.625rem;
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.study-heading button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.study-card {
+  width: 100%;
+  min-height: 20rem;
+}
+
+.study-card .card-inner {
+  width: 100%;
+  min-height: 20rem;
+}
+
+.study-card .card-face {
+  align-items: center;
+  text-align: center;
+}
+
+.study-card .card-face h4 {
+  margin: 0 0 var(--space-2);
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.study-card .card-face p {
+  font-size: clamp(1.25rem, 4vw, 2rem);
+}
+
+.study-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.study-shortcuts {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  text-align: center;
 }
 
 footer {
@@ -397,19 +490,25 @@ footer {
     --color-text: #f3f4f6;
     --color-muted: #cbd5e1;
     --color-border: #374151;
-    --color-accent: #a5b4fc;
+    --color-accent: #b9a7ff;
     --color-on-accent: #111827;
     --color-accent-soft: #312e5c;
+    --color-warm-accent: #fb923c;
+    --color-card-front: #373622;
+    --color-card-back: #173e3a;
+    --color-danger: #fca5a5;
+    --color-danger-soft: #562a35;
     --shadow: 0 1px 3px rgb(0 0 0 / 25%);
   }
 
   header {
-    color: var(--color-on-accent);
+    color: #ffffff;
+    background: linear-gradient(110deg, #342276, #542878);
   }
 
   .delete-button:hover {
-    color: #fca5a5;
-    background: #7f1d1d;
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
   }
 
   .form-error {
