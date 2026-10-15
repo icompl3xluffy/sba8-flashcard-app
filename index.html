@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flashcards</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Flashcards</h1>
+  </header>
+
+  <aside aria-label="Flashcard decks">
+    <div class="section-heading">
+      <h2>Decks</h2>
+      <button id="add-deck-button" class="icon-button" type="button">Add deck</button>
+    </div>
+    <nav aria-label="Deck list">
+      <ul id="deck-list"></ul>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="section-heading">
+      <h2 id="current-deck-title">Cards</h2>
+    </div>
+    <section aria-label="Flashcards" id="cards-area">
+      <article class="empty-state">
+        <h3>No cards yet</h3>
+        <p>Cards for this deck will appear here.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; Flashcards</p>
+  </footer>
+
+  <p id="status-message" class="visually-hidden" role="status" aria-live="polite"></p>
+
+  <div id="deck-modal" class="modal-backdrop" hidden>
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="deck-modal-title"
+      aria-describedby="deck-modal-description"
+      tabindex="-1"
+    >
+      <h2 id="deck-modal-title">Add deck</h2>
+      <p id="deck-modal-description">Give your flashcard deck a name.</p>
+      <form id="deck-form">
+        <label for="deck-name">Deck name</label>
+        <input
+          id="deck-name"
+          name="deckName"
+          type="text"
+          maxlength="60"
+          aria-describedby="deck-form-error"
+          required
+        >
+        <p id="deck-form-error" class="form-error" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button id="cancel-deck-button" class="secondary-button" type="button">Cancel</button>
+          <button id="save-deck-button" type="submit">Create deck</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
