@@ -107,6 +107,11 @@ button:hover {
   filter: brightness(0.94);
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 nav ul {
   display: grid;
   gap: var(--space-1);
@@ -165,7 +170,7 @@ nav ul {
   background: #fee2e2;
 }
 
-:is(a, button):focus-visible {
+:is(a, button, input, textarea):focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 3px;
 }
@@ -199,6 +204,78 @@ article p {
 
 .empty-state {
   min-height: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  perspective: 900px;
+}
+
+.card-inner {
+  position: relative;
+  flex: 1;
+  min-height: 12rem;
+  transform-style: preserve-3d;
+  transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.card.is-flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-wrap: anywhere;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-face h3 {
+  margin: 0 0 var(--space-1);
+  color: var(--color-accent);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.card-face p {
+  margin: 0;
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.card-front {
+  background: var(--color-page);
+}
+
+.card-back {
+  background: var(--color-accent-soft);
+  transform: rotateY(180deg);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.flip-button {
+  margin-right: auto;
 }
 
 footer {
@@ -263,7 +340,8 @@ footer {
   font-weight: 600;
 }
 
-.modal input {
+.modal input,
+.modal textarea {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
@@ -272,6 +350,10 @@ footer {
   background: var(--color-page);
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
+}
+
+.modal textarea {
+  resize: vertical;
 }
 
 .form-error {
@@ -332,5 +414,16 @@ footer {
 
   .form-error {
     color: #fca5a5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

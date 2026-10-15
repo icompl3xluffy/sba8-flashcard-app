@@ -24,6 +24,7 @@
   <main>
     <div class="section-heading">
       <h2 id="current-deck-title">Cards</h2>
+      <button id="add-card-button" type="button" disabled>Add card</button>
     </div>
     <section aria-label="Flashcards" id="cards-area">
       <article class="empty-state">
@@ -64,6 +65,45 @@
         <div class="modal-actions">
           <button id="cancel-deck-button" class="secondary-button" type="button">Cancel</button>
           <button id="save-deck-button" type="submit">Create deck</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="card-modal" class="modal-backdrop" hidden>
+    <section
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="card-modal-title"
+      aria-describedby="card-modal-description"
+      tabindex="-1"
+    >
+      <h2 id="card-modal-title">Add card</h2>
+      <p id="card-modal-description">Add a question and its answer to this deck.</p>
+      <form id="card-form">
+        <label for="card-question">Question</label>
+        <textarea
+          id="card-question"
+          name="question"
+          rows="3"
+          maxlength="500"
+          aria-describedby="card-form-error"
+          required
+        ></textarea>
+        <label for="card-answer">Answer</label>
+        <textarea
+          id="card-answer"
+          name="answer"
+          rows="3"
+          maxlength="1000"
+          aria-describedby="card-form-error"
+          required
+        ></textarea>
+        <p id="card-form-error" class="form-error" aria-live="polite"></p>
+        <div class="modal-actions">
+          <button id="cancel-card-button" class="secondary-button" type="button">Cancel</button>
+          <button id="save-card-button" type="submit">Create card</button>
         </div>
       </form>
     </section>
